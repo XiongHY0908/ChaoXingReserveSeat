@@ -6,5 +6,6 @@
         "roomid":"11107",
         "seatid":["055"],
         "daysofweek": ["Monday" , "Tuesday", "Wednesday", "Thursday", "Friday" , "Saturday" , "Sunday"]
+        }
     ]
 }
