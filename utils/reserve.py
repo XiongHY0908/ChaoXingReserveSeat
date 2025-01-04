@@ -199,74 +199,37 @@ class reserve:
     def submit(self, times, roomid, seatid, action):
         for seat in seatid:
             suc = False
-            if isinstance(times[0], str):
-                while not suc and self.max_attempt > 0:
-                    token = self._get_page_token(self.url.format(roomid, seat))
-                    logging.info(f"Get token: {token}")
-                    captcha = self.resolve_captcha() if self.enable_slider else "" 
-                    logging.info(f"Captcha token {captcha}")
-                    suc = self.get_submit(self.submit_url, times=times,token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
-                    if suc:
-                        return suc
-                    time.sleep(self.sleep_time)
-                    self.max_attempt -= 1
-                return suc
-            else:
-                times_suc = 0
-                
-                while times_suc < len(times) and self.max_attempt > 0:
-                    for time in times:
-                        token = self._get_page_token(self.url.format(roomid, seat))
-                        logging.info(f"Get token: {token}")
-                        captcha = self.resolve_captcha() if self.enable_slider else "" 
-                        logging.info(f"Captcha token {captcha}")
-                        suc = self.get_submit(self.submit_url, times=time,token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
-                        if suc:
-                            times_suc +=1
-                        time.sleep(self.sleep_time)
+            while ~suc and self.max_attempt > 0:
+                token = self._get_page_token(self.url.format(roomid, seat))
+                logging.info(f"Get token: {token}")
+                captcha = self.resolve_captcha() if self.enable_slider else "" 
+                logging.info(f"Captcha token {captcha}")
+                suc = self.get_submit(self.submit_url, times=times,token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
+                if suc:
+                    return suc
+                time.sleep(self.sleep_time)
+                self.max_attempt -= 1
+        return suc
 
-                    self.max_attempt -= 1
-                return times_suc == len(times)
-        
     def get_submit(self, url, times, token, roomid, seatid, captcha="", action=False):
         delta_day = 1 if self.reserve_next_day else 0
         day = datetime.date.today() + datetime.timedelta(days=0+delta_day)  # 预约今天，修改days=1表示预约明天
         if action:
             day = datetime.date.today() + datetime.timedelta(days=1+delta_day)  # 由于action时区问题导致其早+8区一天
-        if isinstance(times, list):
-            for t in times:
-                parm = {
-                    "roomId": roomid,
-                    "startTime": t[0],
-                    "endTime": t[1],
-                    "day": str(day),
-                    "seatNum": seatid,
-                    "captcha": captcha,
-                    "token": token
-                }
-                logging.info(f"submit parameter {parm} ")
-                parm["enc"] = enc(parm)
-                html = self.requests.post(
-                    url=url, params=parm, verify=True).content.decode('utf-8')
-                self.submit_msg.append(
-                    times[0] + "~" + times[1] + ':  ' + str(json.loads(html)))
-                logging.info(json.loads(html))
-        else:
-            parm = {
-                    "roomId": roomid,
-                    "startTime": times[0],
-                    "endTime": times[1],
-                    "day": str(day),
-                    "seatNum": seatid,
-                    "captcha": captcha,
-                    "token": token
-                }
-            logging.info(f"submit parameter {parm} ")
-            parm["enc"] = enc(parm)
-            html = self.requests.post(
-                url=url, params=parm, verify=True).content.decode('utf-8')
-            self.submit_msg.append(
-                times[0] + "~" + times[1] + ':  ' + str(json.loads(html)))
-            logging.info(json.loads(html))
-
+        parm = {
+            "roomId": roomid,
+            "startTime": times[0],
+            "endTime": times[1],
+            "day": str(day),
+            "seatNum": seatid,
+            "captcha": captcha,
+            "token": token
+        }
+        logging.info(f"submit parameter {parm} ")
+        parm["enc"] = enc(parm)
+        html = self.requests.post(
+            url=url, params=parm, verify=True).content.decode('utf-8')
+        self.submit_msg.append(
+            times[0] + "~" + times[1] + ':  ' + str(json.loads(html)))
+        logging.info(json.loads(html))
         return json.loads(html)["success"]
