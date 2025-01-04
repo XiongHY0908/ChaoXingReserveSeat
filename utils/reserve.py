@@ -195,21 +195,22 @@ class reserve:
         _, _, _, max_loc = cv2.minMaxLoc(res)  
         tl = max_loc
         return tl[0]
-
     def submit(self, times, roomid, seatid, action):
-        for seat in seatid:
-            suc = False
-            while ~suc and self.max_attempt > 0:
-                token = self._get_page_token(self.url.format(roomid, seat))
-                logging.info(f"Get token: {token}")
-                captcha = self.resolve_captcha() if self.enable_slider else "" 
-                logging.info(f"Captcha token {captcha}")
-                suc = self.get_submit(self.submit_url, times=times,token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
-                if suc:
-                    return suc
-                time.sleep(self.sleep_time)
-                self.max_attempt -= 1
-        return suc
+    for seat in seatid:
+        suc = False
+        while not suc and self.max_attempt > 0:
+            token = self._get_page_token(self.url.format(roomid, seat))
+            logging.info(f"Get token: {token}")
+            captcha = self.resolve_captcha() if self.enable_slider else ""
+            logging.info(f"Captcha token {captcha}")
+            # 遍历每个时间段
+            for time_slot in times:
+                suc = self.get_submit(self.submit_url, times=[time_slot], token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
+                if not suc:
+                    break  # 如果某个时间段预约失败，跳出循环
+            time.sleep(self.sleep_time)
+            self.max_attempt -= 1
+    return suc
 
     def get_submit(self, url, times, token, roomid, seatid, captcha="", action=False):
         delta_day = 1 if self.reserve_next_day else 0
