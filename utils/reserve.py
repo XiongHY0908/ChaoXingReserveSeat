@@ -195,42 +195,48 @@ class reserve:
         _, _, _, max_loc = cv2.minMaxLoc(res)  
         tl = max_loc
         return tl[0]
-    def submit(self, times, roomid, seatid, action):
-        for seat in seatid:
-            suc = False
-            while not suc and self.max_attempt > 0:
-                token = self._get_page_token(self.url.format(roomid, seat))
-                logging.info(f"Get token: {token}")
-                captcha = self.resolve_captcha() if self.enable_slider else ""
-                logging.info(f"Captcha token {captcha}")
-                # 遍历每个时间段
-                for time_slot in times:
-                    suc = self.get_submit(self.submit_url, times=[time_slot], token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
-                    if not suc:
-                        break  # 如果某个时间段预约失败，跳出循环
-                time.sleep(self.sleep_time)
-                self.max_attempt -= 1
-        return suc
+        
+def submit(self, times, roomid, seatid, action):
+    for seat in seatid:  # 确保这一行缩进正确
+        suc = False  # 这一行必须缩进到 for 循环内部
+        while not suc and self.max_attempt > 0:  # 这一行必须缩进到 for 循环内部
+            token = self._get_page_token(self.url.format(roomid, seat))
+            logging.info(f"Get token: {token}")
+            captcha = self.resolve_captcha() if self.enable_slider else ""
+            logging.info(f"Captcha token {captcha}")
+            # 遍历每个时间段
+            for time_slot in times:  # 这一行必须缩进到 while 循环内部
+                suc = self.get_submit(self.submit_url, times=time_slot, token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
+                if not suc:
+                    break  # 如果某个时间段预约失败，跳出循环
+            time.sleep(self.sleep_time)  # 这一行必须缩进到 while 循环内部
+            self.max_attempt -= 1  # 这一行必须缩进到 while 循环内部
+    return suc  # 这一行必须缩进到 for 循环外部
 
-    def get_submit(self, url, times, token, roomid, seatid, captcha="", action=False):
-        delta_day = 1 if self.reserve_next_day else 0
-        day = datetime.date.today() + datetime.timedelta(days=0+delta_day)  # 预约今天，修改days=1表示预约明天
-        if action:
-            day = datetime.date.today() + datetime.timedelta(days=1+delta_day)  # 由于action时区问题导致其早+8区一天
-        parm = {
-            "roomId": roomid,
-            "startTime": times[0],
-            "endTime": times[1],
-            "day": str(day),
-            "seatNum": seatid,
-            "captcha": captcha,
-            "token": token
-        }
-        logging.info(f"submit parameter {parm} ")
-        parm["enc"] = enc(parm)
-        html = self.requests.post(
-            url=url, params=parm, verify=True).content.decode('utf-8')
-        self.submit_msg.append(
-            times[0] + "~" + times[1] + ':  ' + str(json.loads(html)))
-        logging.info(json.loads(html))
-        return json.loads(html)["success"]
+def get_submit(self, url, times, token, roomid, seatid, captcha="", action=False):
+    delta_day = 1 if self.reserve_next_day else 0
+    day = datetime.date.today() + datetime.timedelta(days=0 + delta_day)  # 预约今天，修改days=1表示预约明天
+    if action:
+        day = datetime.date.today() + datetime.timedelta(days=1 + delta_day)  # 由于action时区问题导致其早+8区一天
+
+    # 确保 times 是一个包含两个元素的列表
+    if isinstance(times, list) and len(times) == 2 and all(isinstance(t, str) for t in times):
+        start_time, end_time = times
+    else:
+        raise ValueError("times 参数必须是一个包含两个字符串元素的列表，例如 ['8:00', '8:30']")
+
+    parm = {
+        "roomId": roomid,
+        "startTime": start_time,  # 字符串形式
+        "endTime": end_time,      # 字符串形式
+        "day": str(day),
+        "seatNum": seatid,
+        "captcha": captcha,
+        "token": token
+    }
+    logging.info(f"submit parameter {parm} ")
+    parm["enc"] = enc(parm)
+    html = self.requests.post(url=url, params=parm, verify=True).content.decode('utf-8')
+    self.submit_msg.append(f"{start_time}~{end_time}: {str(json.loads(html))}")
+    logging.info(json.loads(html))
+    return json.loads(html)["success"]
