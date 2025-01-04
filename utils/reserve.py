@@ -196,7 +196,7 @@ class reserve:
         tl = max_loc
         return tl[0]
     def submit(self, times, roomid, seatid, action):
-    for seat in seatid:
+        for seat in seatid:
         suc = False
         while not suc and self.max_attempt > 0:
             token = self._get_page_token(self.url.format(roomid, seat))
