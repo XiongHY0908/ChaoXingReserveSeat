@@ -29,20 +29,25 @@ def login_and_reserve(users, usernames, passwords, action, success_list=None):
         success_list = [False] * len(users)
     current_dayofweek = get_current_dayofweek(action)
     for index, user in enumerate(users):
-        username, password, times, roomid, seatid, daysofweek = user.values()
+        username, password, times_list, roomid, seatid, daysofweek = user.values()
         if action:
             username, password = usernames.split(',')[index], passwords.split(',')[index]
-        if(current_dayofweek not in daysofweek):
+        if current_dayofweek not in daysofweek:
             logging.info("Today not set to reserve")
             continue
         if not success_list[index]: 
-            logging.info(f"----------- {username} -- {times} -- {seatid} try -----------")
+            logging.info(f"----------- {username} -- {times_list} -- {seatid} try -----------")
             s = reserve(sleep_time=SLEEPTIME, max_attempt=MAX_ATTEMPT, enable_slider=ENABLE_SLIDER, reserve_next_day=RESERVE_NEXT_DAY)
             s.get_login_status()
             s.login(username, password)
             s.requests.headers.update({'Host': 'office.chaoxing.com'})
-            suc = s.submit(times, roomid, seatid, action)
-            success_list[index] = suc
+            all_suc = True
+            for time_slot in times_list:
+                suc = s.submit([time_slot], roomid, seatid, action)
+                if not suc:
+                    all_suc = False
+                    break
+            success_list[index] = all_suc
     return success_list
 
 
