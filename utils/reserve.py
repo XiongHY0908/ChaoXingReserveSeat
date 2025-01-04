@@ -210,26 +210,45 @@ class reserve:
                 time.sleep(self.sleep_time)
                 self.max_attempt -= 1
         return suc
-
     def get_submit(self, url, times, token, roomid, seatid, captcha="", action=False):
         delta_day = 1 if self.reserve_next_day else 0
         day = datetime.date.today() + datetime.timedelta(days=0+delta_day)  # 预约今天，修改days=1表示预约明天
         if action:
             day = datetime.date.today() + datetime.timedelta(days=1+delta_day)  # 由于action时区问题导致其早+8区一天
-        parm = {
-            "roomId": roomid,
-            "startTime": times[0],
-            "endTime": times[1],
-            "day": str(day),
-            "seatNum": seatid,
-            "captcha": captcha,
-            "token": token
-        }
-        logging.info(f"submit parameter {parm} ")
-        parm["enc"] = enc(parm)
-        html = self.requests.post(
-            url=url, params=parm, verify=True).content.decode('utf-8')
-        self.submit_msg.append(
-            times[0] + "~" + times[1] + ':  ' + str(json.loads(html)))
-        logging.info(json.loads(html))
+        if isinstance(times, list):
+            for t in times:
+                parm = {
+                    "roomId": roomid,
+                    "startTime": t[0],
+                    "endTime": t[1],
+                    "day": str(day),
+                    "seatNum": seatid,
+                    "captcha": captcha,
+                    "token": token
+                }
+                logging.info(f"submit parameter {parm} ")
+                parm["enc"] = enc(parm)
+                html = self.requests.post(
+                    url=url, params=parm, verify=True).content.decode('utf-8')
+                self.submit_msg.append(
+                    times[0] + "~" + times[1] + ':  ' + str(json.loads(html)))
+                logging.info(json.loads(html))
+        else:
+            parm = {
+                    "roomId": roomid,
+                    "startTime": times[0],
+                    "endTime": times[1],
+                    "day": str(day),
+                    "seatNum": seatid,
+                    "captcha": captcha,
+                    "token": token
+                }
+            logging.info(f"submit parameter {parm} ")
+            parm["enc"] = enc(parm)
+            html = self.requests.post(
+                url=url, params=parm, verify=True).content.decode('utf-8')
+            self.submit_msg.append(
+                times[0] + "~" + times[1] + ':  ' + str(json.loads(html)))
+            logging.info(json.loads(html))
+
         return json.loads(html)["success"]
