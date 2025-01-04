@@ -199,17 +199,35 @@ class reserve:
     def submit(self, times, roomid, seatid, action):
         for seat in seatid:
             suc = False
-            while ~suc and self.max_attempt > 0:
-                token = self._get_page_token(self.url.format(roomid, seat))
-                logging.info(f"Get token: {token}")
-                captcha = self.resolve_captcha() if self.enable_slider else "" 
-                logging.info(f"Captcha token {captcha}")
-                suc = self.get_submit(self.submit_url, times=times,token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
-                if suc:
-                    return suc
-                time.sleep(self.sleep_time)
-                self.max_attempt -= 1
-        return suc
+            if isinstance(times[0], str):
+                while not suc and self.max_attempt > 0:
+                    token = self._get_page_token(self.url.format(roomid, seat))
+                    logging.info(f"Get token: {token}")
+                    captcha = self.resolve_captcha() if self.enable_slider else "" 
+                    logging.info(f"Captcha token {captcha}")
+                    suc = self.get_submit(self.submit_url, times=times,token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
+                    if suc:
+                        return suc
+                    time.sleep(self.sleep_time)
+                    self.max_attempt -= 1
+                return suc
+            else:
+                times_suc = 0
+                
+                while times_suc < len(times) and self.max_attempt > 0:
+                    for time in times:
+                        token = self._get_page_token(self.url.format(roomid, seat))
+                        logging.info(f"Get token: {token}")
+                        captcha = self.resolve_captcha() if self.enable_slider else "" 
+                        logging.info(f"Captcha token {captcha}")
+                        suc = self.get_submit(self.submit_url, times=time,token=token, roomid=roomid, seatid=seat, captcha=captcha, action=action)
+                        if suc:
+                            times_suc +=1
+                        time.sleep(self.sleep_time)
+
+                    self.max_attempt -= 1
+                return times_suc == len(times)
+        
     def get_submit(self, url, times, token, roomid, seatid, captcha="", action=False):
         delta_day = 1 if self.reserve_next_day else 0
         day = datetime.date.today() + datetime.timedelta(days=0+delta_day)  # 预约今天，修改days=1表示预约明天
